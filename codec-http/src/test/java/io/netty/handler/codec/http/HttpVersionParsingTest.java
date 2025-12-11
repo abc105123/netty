@@ -16,6 +16,7 @@
 package io.netty.handler.codec.http;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.Executable;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
@@ -89,24 +90,33 @@ public class HttpVersionParsingTest {
 
     @Test
     void testCustomVersionStrictFailsOnLongVersion() {
-        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () ->
-                new HttpVersion("HTTP/10.1", true, true)
-        );
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                new HttpVersion("HTTP/10.1", true, true);
+            }
+        });
         assertTrue(ex.getMessage().contains("invalid version format"));
     }
 
     @Test
     void testInvalidFormatMissingSlash() {
-        assertThrows(IllegalArgumentException.class, () ->
-                HttpVersion.valueOf("HTTP1.1")
-        );
+        assertThrows(IllegalArgumentException.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                HttpVersion.valueOf("HTTP1.1");
+            }
+        });
     }
 
     @Test
     void testInvalidFormatWhitespaceInProtocol() {
-        assertThrows(IllegalArgumentException.class, () ->
-                HttpVersion.valueOf("HT TP/1.1")
-        );
+        assertThrows(IllegalArgumentException.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                HttpVersion.valueOf("HT TP/1.1");
+            }
+        });
     }
 
     @ParameterizedTest

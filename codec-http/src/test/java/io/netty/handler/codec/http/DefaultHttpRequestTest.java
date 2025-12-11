@@ -17,6 +17,7 @@ package io.netty.handler.codec.http;
 
 import io.netty.util.AsciiString;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.Executable;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
@@ -43,9 +44,13 @@ public class DefaultHttpRequestTest {
             " http://localhost/",
             "http://local host/",
     })
-    void constructorMustRejectIllegalUrisByDefault(String uri) {
-        assertThrows(IllegalArgumentException.class, () ->
-                new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, uri));
+    void constructorMustRejectIllegalUrisByDefault(final String uri) {
+        assertThrows(IllegalArgumentException.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, uri);
+            }
+        });
     }
 
     @ParameterizedTest
@@ -89,14 +94,17 @@ public class DefaultHttpRequestTest {
             " GE\nT",
             " GE\nT",
     })
-    void constructorMustRejectIllegalHttpMethodByDefault(String method) {
-        assertThrows(IllegalArgumentException.class, () -> {
-            new DefaultHttpRequest(HttpVersion.HTTP_1_0, new HttpMethod("GET") {
-                @Override
-                public AsciiString asciiName() {
-                    return new AsciiString(method);
-                }
-            }, "/");
+    void constructorMustRejectIllegalHttpMethodByDefault(final String method) {
+        assertThrows(IllegalArgumentException.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                new DefaultHttpRequest(HttpVersion.HTTP_1_0, new HttpMethod("GET") {
+                    @Override
+                    public AsciiString asciiName() {
+                        return new AsciiString(method);
+                    }
+                }, "/");
+            }
         });
     }
 
