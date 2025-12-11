@@ -19,7 +19,7 @@
   <parent>
     <groupId>io.netty</groupId>
     <artifactId>netty-parent</artifactId>
-    <version>4.2.8.Final-SNAPSHOT</version>
+    <version>4.2.8.Final</version>
   </parent>
 
   <artifactId>netty-codec-native-quic</artifactId>
@@ -763,7 +763,7 @@
                     </copy>
 
                     <!-- Delete boringssl source directory after build to free up space -->
-                    <delete dir="${boringsslSourceDir}" failonerror="false"/>
+                    <delete dir="${boringsslSourceDir}" failonerror="false" />
                   </else>
                 </if>
               </target>
