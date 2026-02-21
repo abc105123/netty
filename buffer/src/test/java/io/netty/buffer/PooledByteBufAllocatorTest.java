@@ -30,6 +30,7 @@ import java.util.Queue;
 import java.util.Random;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.FutureTask;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
@@ -415,8 +416,8 @@ public class PooledByteBufAllocatorTest extends AbstractByteBufAllocatorTest<Poo
     }
 
     @Test
-    @Timeout(value = 3000, unit = MILLISECONDS)
-    public void testNumThreadCachesWithNoDirectArenas() throws InterruptedException {
+    @Timeout(10)
+    public void testNumThreadCachesWithNoDirectArenas() throws Exception {
         int numHeapArenas = 1;
         final PooledByteBufAllocator allocator =
             new PooledByteBufAllocator(numHeapArenas, 0, 8192, 1);
@@ -435,11 +436,11 @@ public class PooledByteBufAllocatorTest extends AbstractByteBufAllocatorTest<Poo
     }
 
     @Test
-    @Timeout(value = 3000, unit = MILLISECONDS)
-    public void testNumThreadCachesAccountForDirectAndHeapArenas() throws InterruptedException {
-        int numHeapArenas = 1;
+    @Timeout(10)
+    public void testNumThreadCachesAccountForDirectAndHeapArenas() throws Exception {
+        int numArenas = 1;
         final PooledByteBufAllocator allocator =
-                new PooledByteBufAllocator(numHeapArenas, 0, 8192, 1);
+                new PooledByteBufAllocator(numArenas, numArenas, 8192, 1);
 
         ThreadCache tcache0 = createNewThreadCache(allocator, false);
         assertEquals(1, allocator.metric().numThreadLocalCaches());
@@ -455,8 +456,8 @@ public class PooledByteBufAllocatorTest extends AbstractByteBufAllocatorTest<Poo
     }
 
     @Test
-    @Timeout(value = 3000, unit = MILLISECONDS)
-    public void testThreadCacheToArenaMappings() throws InterruptedException {
+    @Timeout(10)
+    public void testThreadCacheToArenaMappings() throws Exception {
         int numArenas = 2;
         final PooledByteBufAllocator allocator =
             new PooledByteBufAllocator(numArenas, numArenas, 8192, 1);
@@ -499,8 +500,7 @@ public class PooledByteBufAllocatorTest extends AbstractByteBufAllocatorTest<Poo
             throws InterruptedException {
         final CountDownLatch latch = new CountDownLatch(1);
         final CountDownLatch cacheLatch = new CountDownLatch(1);
-        final Thread t = new FastThreadLocalThread(new Runnable() {
-
+        FutureTask<Void> task = new FutureTask<>(new Runnable() {
             @Override
             public void run() {
                 final ByteBuf buf;
@@ -526,7 +526,8 @@ public class PooledByteBufAllocatorTest extends AbstractByteBufAllocatorTest<Poo
 
                 FastThreadLocal.removeAll();
             }
-        });
+        }, null);
+        final Thread t = new FastThreadLocalThread(task);
         t.start();
 
         // Wait until we allocated a buffer and so be sure the thread was started and the cache exists.
@@ -534,15 +535,26 @@ public class PooledByteBufAllocatorTest extends AbstractByteBufAllocatorTest<Poo
 
         return new ThreadCache() {
             @Override
-            public void destroy() throws InterruptedException {
+            public void destroy() throws Exception {
                 latch.countDown();
-                t.join();
+                try {
+                    task.get();
+                    t.join();
+                } catch (InterruptedException e) {
+                    StackTraceElement[] stackTrace = t.getStackTrace();
+                    InterruptedException asyncIE = new InterruptedException(
+                            "Asynchronous interruption: " + t);
+                    t.interrupt();
+                    asyncIE.setStackTrace(stackTrace);
+                    e.addSuppressed(asyncIE);
+                    throw e;
+                }
             }
         };
     }
 
     private interface ThreadCache {
-        void destroy() throws InterruptedException;
+        void destroy() throws Exception;
     }
 
     @Test
